@@ -1,3 +1,4 @@
 clearDb.js
 seed.js
 node_modules/
+.env
