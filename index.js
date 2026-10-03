@@ -30,7 +30,7 @@ io.on('connection', (socket) => {
 });
 
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || 'https://midaswarts.netlify.app', credentials: true }));
+app.use(cors({ origin: process.env.CLIENT_URL || 'https://midaswarts.netlify.app', credentials: true, allowOrigin: true  }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
