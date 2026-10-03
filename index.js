@@ -14,6 +14,7 @@ const normalizeUrl = (url) => (url ? url.trim().replace(/\/+$/, '') : '');
 
 // Default allowed origins list
 const defaultOrigins = [
+  '*',
   'https://midaswarts.netlify.app',
   'http://localhost:5173',
   'http://localhost:3000',
@@ -73,7 +74,6 @@ io.on('connection', (socket) => {
 
 // Middleware
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
