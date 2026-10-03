@@ -90,4 +90,25 @@ const deleteParticipant = async (req, res, next) => {
   }
 };
 
-module.exports = { getParticipants, getParticipant, addParticipant, updateParticipant, deleteParticipant };
+// @desc Bulk Add participants via CSV/JSON — Admin
+// @route POST /api/participants/bulk
+const addBulkParticipants = async (req, res, next) => {
+  try {
+    const { participants } = req.body;
+    if (!participants || !Array.isArray(participants)) {
+      return res.status(400).json({ message: 'Invalid data format' });
+    }
+
+    const enriched = participants.map(p => ({
+      ...p,
+      addedBy: req.user._id,
+    }));
+
+    const result = await Participant.insertMany(enriched, { ordered: false });
+    res.status(201).json({ message: `${result.length} participants added successfully`, count: result.length });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getParticipants, getParticipant, addParticipant, updateParticipant, deleteParticipant, addBulkParticipants };
