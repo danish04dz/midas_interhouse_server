@@ -9,14 +9,56 @@ const errorHandler = require('./middleware/errorHandler');
 // Connect to MongoDB
 connectDB();
 
+// Normalize URL helper to strip trailing slashes
+const normalizeUrl = (url) => (url ? url.trim().replace(/\/+$/, '') : '');
+
+// Default allowed origins list
+const defaultOrigins = [
+  'https://midaswarts.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000',
+];
+
+// Parse CLIENT_URL environment variable (supports comma-separated URLs or single URL)
+const envOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map(normalizeUrl).filter(Boolean)
+  : [];
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // Allow non-browser requests (Postman, curl, server-to-server)
+  const normalizedOrigin = normalizeUrl(origin);
+  return allowedOrigins.some((allowed) => normalizeUrl(allowed) === normalizedOrigin);
+};
+
+// Express CORS options
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS warning for origin: ${origin}`);
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+};
+
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io setup
+// Socket.io setup with matching CORS origin resolution
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
@@ -30,7 +72,8 @@ io.on('connection', (socket) => {
 });
 
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || 'https://midaswarts.netlify.app', credentials: true, allowOrigin: true  }));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
