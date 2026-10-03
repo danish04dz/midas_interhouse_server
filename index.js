@@ -91,6 +91,7 @@ app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/gallery', require('./routes/gallery'));
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/public', require('./routes/public'));
+app.use('/api/fixtures', require('./routes/fixtures'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'OK', time: new Date() }));

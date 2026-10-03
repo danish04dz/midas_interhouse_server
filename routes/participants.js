@@ -7,8 +7,8 @@ const { uploadParticipantPhoto } = require('../middleware/upload');
 
 router.get('/', getParticipants);
 router.get('/:id', getParticipant);
-router.post('/', protect, authorizeRoles('admin', 'teacher'), uploadParticipantPhoto, addParticipant);
-router.put('/:id', protect, authorizeRoles('admin', 'teacher'), uploadParticipantPhoto, updateParticipant);
+router.post('/', protect, authorizeRoles('admin'), uploadParticipantPhoto, addParticipant);
+router.put('/:id', protect, authorizeRoles('admin'), uploadParticipantPhoto, updateParticipant);
 router.delete('/:id', protect, authorizeRoles('admin'), deleteParticipant);
 
 module.exports = router;

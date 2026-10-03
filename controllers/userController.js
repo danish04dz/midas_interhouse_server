@@ -46,10 +46,11 @@ const updateUser = async (req, res, next) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const { name, email, password, department, isActive } = req.body;
+    const { name, email, password, department, isActive, role } = req.body;
     user.name = name || user.name;
     user.email = email || user.email;
     user.department = department || user.department;
+    if (role) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
     if (password) user.password = password; // will be hashed by pre-save hook
 
