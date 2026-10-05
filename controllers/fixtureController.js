@@ -68,7 +68,7 @@ const getFixture = asyncHandler(async (req, res) => {
 const createFixture = asyncHandler(async (req, res) => {
   const {
     event, session: sessionId, sport, teamA, teamB, title,
-    scheduledAt, venue, youtubeUrl, stage, matchNumber, nextFixture, nextFixtureSlot
+    scheduledAt, duration, venue, youtubeUrl, stage, matchNumber, nextFixture, nextFixtureSlot
   } = req.body;
 
   let activeSession = sessionId;
@@ -88,6 +88,7 @@ const createFixture = asyncHandler(async (req, res) => {
     teamA: { house: teamA.house, label: teamA.label || '' },
     teamB: { house: teamB.house, label: teamB.label || '' },
     scheduledAt,
+    duration,
     venue,
     youtubeUrl,
     stage: stage || 'league',
@@ -114,9 +115,10 @@ const updateFixture = asyncHandler(async (req, res) => {
   const fixture = await Fixture.findById(req.params.id);
   if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
 
-  const { title, scheduledAt, venue, youtubeUrl, status, stage, matchNumber, nextFixture, nextFixtureSlot, teamA, teamB, sport } = req.body;
+  const { title, scheduledAt, duration, venue, youtubeUrl, status, stage, matchNumber, nextFixture, nextFixtureSlot, teamA, teamB, sport } = req.body;
   if (title !== undefined) fixture.title = title;
   if (scheduledAt !== undefined) fixture.scheduledAt = scheduledAt;
+  if (duration !== undefined) fixture.duration = duration;
   if (venue !== undefined) fixture.venue = venue;
   if (youtubeUrl !== undefined) fixture.youtubeUrl = youtubeUrl;
   if (status !== undefined) fixture.status = status;
@@ -140,10 +142,92 @@ const updateFixture = asyncHandler(async (req, res) => {
   res.json(populated);
 });
 
+// @desc  Create multiple fixtures in bulk
+// @route POST /api/fixtures/bulk
+const createBulkFixtures = asyncHandler(async (req, res) => {
+  const { matches } = req.body;
+  if (!matches || !Array.isArray(matches) || matches.length === 0) {
+    return res.status(400).json({ message: 'Matches array is required' });
+  }
+
+  const active = await Session.findOne({ isActive: true });
+  const activeSession = active ? active._id : null;
+
+  const createdMap = {};
+  const createdFixtures = [];
+
+  // 1. Create all fixtures first
+  for (const match of matches) {
+    const { tempId, title, event, sport, teamA, teamB, scheduledAt, duration, venue } = match;
+    const scoreDefaults = buildDefaultScore(sport);
+
+    const parseTeam = (val) => {
+      if (!val) return { house: null, label: 'TBD' };
+      const [type, id] = val.split(':');
+      if (type === 'house') return { house: id, label: '' };
+      if (type === 'winner') {
+        const sourceTitle = matches.find(m => m.tempId === id)?.title || 'Match';
+        return { house: null, label: `Winner of ${sourceTitle}` };
+      }
+      if (type === 'loser') {
+        const sourceTitle = matches.find(m => m.tempId === id)?.title || 'Match';
+        return { house: null, label: `Loser of ${sourceTitle}` };
+      }
+      return { house: null, label: 'TBD' };
+    };
+
+    const fixture = await Fixture.create({
+      title,
+      event,
+      session: activeSession,
+      sport,
+      teamA: parseTeam(teamA),
+      teamB: parseTeam(teamB),
+      scheduledAt: scheduledAt || undefined,
+      duration: duration || '',
+      venue: venue || '',
+      createdBy: req.user._id,
+      ...scoreDefaults,
+    });
+    
+    if (tempId) createdMap[tempId] = fixture;
+    createdFixtures.push(fixture);
+  }
+
+  // 2. Link advanced brackets
+  for (const match of matches) {
+    const fixture = createdMap[match.tempId];
+    if (!fixture) continue;
+
+    const linkAdvance = async (val, slot) => {
+      if (!val) return;
+      const [type, sourceTempId] = val.split(':');
+      if (type === 'winner' || type === 'loser') {
+        const sourceFixture = createdMap[sourceTempId];
+        if (sourceFixture) {
+           if (type === 'winner') {
+             sourceFixture.nextFixture = fixture._id;
+             sourceFixture.nextFixtureSlot = slot;
+           } else {
+             sourceFixture.loserNextFixture = fixture._id;
+             sourceFixture.loserNextFixtureSlot = slot;
+           }
+           await sourceFixture.save();
+        }
+      }
+    };
+
+    await linkAdvance(match.teamA, 'teamA');
+    await linkAdvance(match.teamB, 'teamB');
+  }
+
+  res.status(201).json({ message: `${createdFixtures.length} matches created successfully!`, fixtures: createdFixtures });
+});
+
 // @desc  Create 4-Team Tournament Bracket (SF1, SF2, Final)
 // @route POST /api/fixtures/bracket
 const createTournamentBracket = asyncHandler(async (req, res) => {
-  const { eventId, sport, houses, venue, scheduledAt, titlePrefix } = req.body;
+  const { eventId, sport, houses, venue, scheduledAt, duration, titlePrefix } = req.body;
   if (!houses || houses.length < 4) {
     return res.status(400).json({ message: '4 Houses are required to build a 4-team knockout bracket' });
   }
@@ -152,7 +236,7 @@ const createTournamentBracket = asyncHandler(async (req, res) => {
   const activeSession = active ? active._id : null;
   const prefix = titlePrefix || 'Championship';
 
-  // 1. Create Final Match (Match 3)
+  // 1. Create Final Match (Match 4)
   const finalMatch = await Fixture.create({
     title: `${prefix} — 🏆 GRAND FINAL (Winner SF1 vs Winner SF2)`,
     event: eventId,
@@ -161,13 +245,32 @@ const createTournamentBracket = asyncHandler(async (req, res) => {
     teamA: { house: houses[0], label: 'Winner SF1 TBD' },
     teamB: { house: houses[2], label: 'Winner SF2 TBD' },
     stage: 'final',
-    matchNumber: 3,
+    matchNumber: 4,
     venue: venue || 'Main Arena',
+    scheduledAt: scheduledAt || undefined,
+    duration: duration || '',
     createdBy: req.user._id,
     ...buildDefaultScore(sport),
   });
 
-  // 2. Create Semi-Final 1 (Match 1) -> Winner to Final teamA
+  // 2. Create Third-Place Match (Match 3)
+  const thirdPlaceMatch = await Fixture.create({
+    title: `${prefix} — 🥉 Third-Place Match (Loser SF1 vs Loser SF2)`,
+    event: eventId,
+    session: activeSession,
+    sport,
+    teamA: { house: houses[1], label: 'Loser SF1 TBD' },
+    teamB: { house: houses[3], label: 'Loser SF2 TBD' },
+    stage: 'third_place',
+    matchNumber: 3,
+    venue: venue || 'Main Arena',
+    scheduledAt: scheduledAt || undefined,
+    duration: duration || '',
+    createdBy: req.user._id,
+    ...buildDefaultScore(sport),
+  });
+
+  // 3. Create Semi-Final 1 (Match 1) -> Winner to Final teamA, Loser to Third-Place teamA
   const sf1 = await Fixture.create({
     title: `${prefix} — ⚔️ Semi-Final 1`,
     event: eventId,
@@ -179,13 +282,16 @@ const createTournamentBracket = asyncHandler(async (req, res) => {
     matchNumber: 1,
     nextFixture: finalMatch._id,
     nextFixtureSlot: 'teamA',
+    loserNextFixture: thirdPlaceMatch._id,
+    loserNextFixtureSlot: 'teamA',
     venue: venue || 'Main Arena',
     scheduledAt: scheduledAt || undefined,
+    duration: duration || '',
     createdBy: req.user._id,
     ...buildDefaultScore(sport),
   });
 
-  // 3. Create Semi-Final 2 (Match 2) -> Winner to Final teamB
+  // 4. Create Semi-Final 2 (Match 2) -> Winner to Final teamB, Loser to Third-Place teamB
   const sf2 = await Fixture.create({
     title: `${prefix} — ⚔️ Semi-Final 2`,
     event: eventId,
@@ -197,15 +303,18 @@ const createTournamentBracket = asyncHandler(async (req, res) => {
     matchNumber: 2,
     nextFixture: finalMatch._id,
     nextFixtureSlot: 'teamB',
+    loserNextFixture: thirdPlaceMatch._id,
+    loserNextFixtureSlot: 'teamB',
     venue: venue || 'Main Arena',
     scheduledAt: scheduledAt || undefined,
+    duration: duration || '',
     createdBy: req.user._id,
     ...buildDefaultScore(sport),
   });
 
   res.status(201).json({
     message: '4-Team Tournament Bracket created successfully!',
-    sf1, sf2, finalMatch,
+    sf1, sf2, thirdPlaceMatch, finalMatch,
   });
 });
 
@@ -323,6 +432,40 @@ const completeFixture = asyncHandler(async (req, res) => {
     }
   }
 
+  // AUTOMATIC ADVANCEMENT FOR LOSER TO NEXT FIXTURE (e.g. Third Place Match)
+  if (winner && !fixture.isDraw && fixture.loserNextFixture && fixture.loserNextFixtureSlot) {
+    const loserId = fixture.teamA.house.toString() === winner.toString() ? fixture.teamB.house : fixture.teamA.house;
+    const House = require('../models/House');
+    const loserHouse = await House.findById(loserId);
+    const nextLoserMatch = await Fixture.findById(fixture.loserNextFixture);
+
+    if (nextLoserMatch) {
+      if (fixture.loserNextFixtureSlot === 'teamA') {
+        nextLoserMatch.teamA.house = loserId;
+        if (loserHouse) nextLoserMatch.teamA.label = `${loserHouse.name} House`;
+      } else if (fixture.loserNextFixtureSlot === 'teamB') {
+        nextLoserMatch.teamB.house = loserId;
+        if (loserHouse) nextLoserMatch.teamB.label = `${loserHouse.name} House`;
+      }
+
+      nextLoserMatch.commentary.push({
+        text: `The Loser of Match #${fixture.matchNumber} (${loserHouse ? loserHouse.name : 'Loser'} House) entered this match.`,
+        type: 'milestone',
+        time: 'QUALIFIED',
+      });
+
+      await nextLoserMatch.save();
+
+      const populatedLoserNext = await Fixture.findById(nextLoserMatch._id)
+        .populate('event', 'name department type')
+        .populate('teamA.house', 'name color logoUrl number')
+        .populate('teamB.house', 'name color logoUrl number')
+        .populate('winner', 'name color logoUrl');
+
+      emitFixtureUpdate(req, populatedLoserNext);
+    }
+  }
+
   const populated = await Fixture.findById(fixture._id)
     .populate('event', 'name department type')
     .populate('teamA.house', 'name color logoUrl number')
@@ -397,6 +540,7 @@ module.exports = {
   getLiveFixtures,
   getFixture,
   createFixture,
+  createBulkFixtures,
   updateFixture,
   createTournamentBracket,
   updateScore,

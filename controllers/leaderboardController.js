@@ -2,8 +2,6 @@ const mongoose = require('mongoose');
 const Score = require('../models/Score');
 const House = require('../models/House');
 
-const DEPARTMENTS = ['robotics_coding', 'games', 'art_craft', 'music', 'pd'];
-
 // @desc House Overall Leaderboard
 // @route GET /api/leaderboard/house
 const getHouseLeaderboard = async (req, res, next) => {
@@ -11,6 +9,15 @@ const getHouseLeaderboard = async (req, res, next) => {
     const filter = { isLocked: true };
     if (req.query.session && mongoose.Types.ObjectId.isValid(req.query.session)) {
       filter.session = new mongoose.Types.ObjectId(req.query.session);
+    }
+
+    let deptFilterMatch = [];
+    if (req.query.department) {
+      if (req.query.department === 'sports' || req.query.department === 'games') {
+        deptFilterMatch = [{ $match: { 'eventData.department': { $in: ['sports', 'games'] } } }];
+      } else {
+        deptFilterMatch = [{ $match: { 'eventData.department': req.query.department } }];
+      }
     }
 
     // Aggregate points grouped by house and department
@@ -25,7 +32,7 @@ const getHouseLeaderboard = async (req, res, next) => {
         },
       },
       { $unwind: '$eventData' },
-      ...(req.query.department ? [{ $match: { 'eventData.department': req.query.department } }] : []),
+      ...deptFilterMatch,
       {
         $group: {
           _id: '$house',
@@ -34,7 +41,10 @@ const getHouseLeaderboard = async (req, res, next) => {
             $sum: { $cond: [{ $eq: ['$eventData.department', 'robotics_coding'] }, '$pointsAwarded', 0] },
           },
           games: {
-            $sum: { $cond: [{ $eq: ['$eventData.department', 'games'] }, '$pointsAwarded', 0] },
+            $sum: { $cond: [{ $in: ['$eventData.department', ['games', 'sports']] }, '$pointsAwarded', 0] },
+          },
+          sports: {
+            $sum: { $cond: [{ $in: ['$eventData.department', ['games', 'sports']] }, '$pointsAwarded', 0] },
           },
           art_craft: {
             $sum: { $cond: [{ $eq: ['$eventData.department', 'art_craft'] }, '$pointsAwarded', 0] },
@@ -74,7 +84,7 @@ const getHouseLeaderboard = async (req, res, next) => {
         _id: h._id,
         house: h,
         totalPoints: 0,
-        robotics_coding: 0, games: 0, art_craft: 0, music: 0, pd: 0,
+        robotics_coding: 0, games: 0, sports: 0, art_craft: 0, music: 0, pd: 0,
         eventsWon: 0,
         rank: ranked.length + allHouses.filter((hh) => !houseIds.includes(hh._id.toString())).indexOf(h) + 1,
       }));
@@ -91,7 +101,14 @@ const getTeamLeaderboard = async (req, res, next) => {
   try {
     const scores = await Score.find({ event: req.params.eventId, entryType: 'team', isLocked: true })
       .populate('house', 'name color logoUrl number')
-      .populate('teamId', 'name captainName members')
+      .populate({
+        path: 'teamId',
+        select: 'name captainName members',
+        populate: {
+          path: 'members',
+          select: 'name rollNumber class photoUrl',
+        },
+      })
       .sort({ rank: 1 });
     res.json(scores);
   } catch (err) {
@@ -114,3 +131,4 @@ const getIndividualLeaderboard = async (req, res, next) => {
 };
 
 module.exports = { getHouseLeaderboard, getTeamLeaderboard, getIndividualLeaderboard };
+

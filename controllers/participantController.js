@@ -1,4 +1,8 @@
 const Participant = require('../models/Participant');
+const IndividualRegistration = require('../models/IndividualRegistration');
+const Team = require('../models/Team');
+const Score = require('../models/Score');
+const Certificate = require('../models/Certificate');
 
 // @desc Get all participants (filterable)
 // @route GET /api/participants
@@ -19,15 +23,67 @@ const getParticipants = async (req, res, next) => {
   }
 };
 
-// @desc Get single participant + their events
+// @desc Get single participant + full profile, events, medals & certificates
 // @route GET /api/participants/:id
 const getParticipant = async (req, res, next) => {
   try {
     const participant = await Participant.findById(req.params.id)
-      .populate('house', 'name color logoUrl')
+      .populate('house', 'name color logoUrl number motto')
       .populate('session', 'year name');
     if (!participant) return res.status(404).json({ message: 'Participant not found' });
-    res.json(participant);
+
+    const [indivRegs, teamRegs] = await Promise.all([
+      IndividualRegistration.find({ participant: req.params.id })
+        .populate('event', 'name department type status venue brief coverImageUrl'),
+      Team.find({ members: req.params.id })
+        .populate('event', 'name department type status venue brief coverImageUrl')
+        .populate('house', 'name color logoUrl'),
+    ]);
+
+    const teamIds = teamRegs.map((t) => t._id);
+
+    const [scores, certificates] = await Promise.all([
+      Score.find({
+        $or: [
+          { participantId: req.params.id },
+          { teamId: { $in: teamIds } },
+        ],
+        isLocked: true,
+      })
+        .populate('event', 'name department type status')
+        .populate('house', 'name color logoUrl')
+        .populate('teamId', 'name')
+        .sort({ createdAt: -1 }),
+      Certificate.find({
+        $or: [
+          { participantId: req.params.id },
+          { teamId: { $in: teamIds } },
+        ],
+      })
+        .populate('event', 'name department')
+        .populate('house', 'name color')
+        .sort({ generatedAt: -1 }),
+    ]);
+
+    const totalPointsContributed = scores.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0);
+    const goldCount = scores.filter((s) => s.rank === 1).length;
+    const silverCount = scores.filter((s) => s.rank === 2).length;
+    const bronzeCount = scores.filter((s) => s.rank === 3).length;
+
+    res.json({
+      participant,
+      individualEvents: indivRegs,
+      teamEvents: teamRegs,
+      scores,
+      certificates,
+      stats: {
+        totalEvents: indivRegs.length + teamRegs.length,
+        totalPoints: totalPointsContributed,
+        goldCount,
+        silverCount,
+        bronzeCount,
+      },
+    });
   } catch (err) {
     next(err);
   }

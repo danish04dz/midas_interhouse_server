@@ -5,6 +5,8 @@ const {
   getLiveFixtures,
   getFixture,
   createFixture,
+  createBulkFixtures,
+  createTournamentBracket,
   updateFixture,
   updateScore,
   addCommentary,
@@ -20,7 +22,9 @@ router.get('/live', getLiveFixtures);
 router.get('/:id', getFixture);
 
 // Protected routes (admin + teacher + scorer)
-router.post('/', protect, authorizeRoles('admin', 'teacher', 'scorer'), createFixture);
+router.post('/', protect, authorizeRoles('admin'), createFixture);
+router.post('/bulk', protect, authorizeRoles('admin'), createBulkFixtures);
+router.post('/bracket', protect, authorizeRoles('admin'), createTournamentBracket);
 router.put('/:id', protect, authorizeRoles('admin', 'teacher', 'scorer'), updateFixture);
 router.patch('/:id/score', protect, authorizeRoles('admin', 'teacher', 'scorer'), updateScore);
 router.post('/:id/commentary', protect, authorizeRoles('admin', 'teacher', 'scorer'), addCommentary);

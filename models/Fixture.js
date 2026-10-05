@@ -89,15 +89,16 @@ const fixtureSchema = new mongoose.Schema(
     sport: { type: String, enum: SPORT_TYPES, default: 'other' },
 
     teamA: {
-      house: { type: mongoose.Schema.Types.ObjectId, ref: 'House', required: true },
+      house: { type: mongoose.Schema.Types.ObjectId, ref: 'House', default: null },
       label: { type: String, default: '' }, // e.g. "Phoenix" or custom
     },
     teamB: {
-      house: { type: mongoose.Schema.Types.ObjectId, ref: 'House', required: true },
+      house: { type: mongoose.Schema.Types.ObjectId, ref: 'House', default: null },
       label: { type: String, default: '' },
     },
 
     scheduledAt: { type: Date },
+    duration: { type: String, default: '' }, // e.g. '90 mins'
     venue: { type: String, default: '' },
     status: { type: String, enum: STATUSES, default: 'scheduled' },
 
@@ -110,6 +111,8 @@ const fixtureSchema = new mongoose.Schema(
     matchNumber: { type: Number, default: 1 },
     nextFixture: { type: mongoose.Schema.Types.ObjectId, ref: 'Fixture', default: null },
     nextFixtureSlot: { type: String, enum: ['teamA', 'teamB', ''], default: '' },
+    loserNextFixture: { type: mongoose.Schema.Types.ObjectId, ref: 'Fixture', default: null },
+    loserNextFixtureSlot: { type: String, enum: ['teamA', 'teamB', ''], default: '' },
 
     // Live stream
     youtubeUrl: { type: String, default: '' }, // YouTube live or video URL

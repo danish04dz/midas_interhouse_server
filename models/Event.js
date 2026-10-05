@@ -43,6 +43,10 @@ const eventSchema = new mongoose.Schema(
     },
     maxIndividuals: { type: Number },              // for individual events
     status: { type: String, enum: STATUSES, default: 'draft' },
+    registrationWindow: {
+      startDate: { type: Date },
+      endDate: { type: Date },
+    },
     coverImageUrl: { type: String, default: '' },
     coverImagePublicId: { type: String, default: '' },
     isAnnual: { type: Boolean, default: false },

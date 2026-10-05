@@ -63,6 +63,7 @@ const createEvent = async (req, res, next) => {
     const parsedTimeline = typeof timeline === 'string' ? JSON.parse(timeline) : timeline;
     const parsedMarkingScheme = typeof markingScheme === 'string' ? JSON.parse(markingScheme) : markingScheme;
     const parsedMaxPerTeam = typeof maxPerTeam === 'string' ? JSON.parse(maxPerTeam) : maxPerTeam;
+    const parsedRegistrationWindow = typeof req.body.registrationWindow === 'string' ? JSON.parse(req.body.registrationWindow) : req.body.registrationWindow;
 
     const event = await Event.create({
       name, department, type, session, brief,
@@ -70,7 +71,7 @@ const createEvent = async (req, res, next) => {
       timeline: parsedTimeline || [],
       markingScheme: parsedMarkingScheme || {},
       venue, maxTeams, maxPerTeam: parsedMaxPerTeam,
-      maxIndividuals, isAnnual,
+      maxIndividuals, isAnnual, registrationWindow: parsedRegistrationWindow,
       coverImageUrl, coverImagePublicId,
       createdBy: req.user._id,
     });
@@ -101,6 +102,8 @@ const updateEvent = async (req, res, next) => {
     if (fields.rules && typeof fields.rules === 'string') fields.rules = JSON.parse(fields.rules);
     if (fields.timeline && typeof fields.timeline === 'string') fields.timeline = JSON.parse(fields.timeline);
     if (fields.markingScheme && typeof fields.markingScheme === 'string') fields.markingScheme = JSON.parse(fields.markingScheme);
+    if (fields.maxPerTeam && typeof fields.maxPerTeam === 'string') fields.maxPerTeam = JSON.parse(fields.maxPerTeam);
+    if (fields.registrationWindow && typeof fields.registrationWindow === 'string') fields.registrationWindow = JSON.parse(fields.registrationWindow);
 
     if (req.file) {
       fields.coverImageUrl = req.file.path;

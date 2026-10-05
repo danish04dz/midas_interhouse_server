@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
@@ -14,7 +16,7 @@ const normalizeUrl = (url) => (url ? url.trim().replace(/\/+$/, '') : '');
 
 // Default allowed origins list
 const defaultOrigins = [
-  '*',
+  'https://midaswarts.netlify.app',
   'https://midaswarts.netlify.app',
   'http://localhost:5173',
   'http://localhost:3000',
@@ -40,8 +42,8 @@ const corsOptions = {
     if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      console.warn(`⚠️ CORS warning for origin: ${origin}`);
-      callback(null, true);
+      console.warn(`⚠️ CORS blocked for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -56,7 +58,11 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      callback(null, true);
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     },
     methods: ['GET', 'POST'],
     credentials: true,
@@ -73,11 +79,20 @@ io.on('connection', (socket) => {
 });
 
 // Middleware
+app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Rate limiting for auth
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 requests per windowMs
+  message: { message: 'Too many login attempts, please try again after 15 minutes' }
+});
+
 // Routes
+app.use('/api/auth/login', authLimiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/houses', require('./routes/houses'));
 app.use('/api/users', require('./routes/users'));
