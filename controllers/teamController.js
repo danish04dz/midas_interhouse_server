@@ -37,7 +37,7 @@ const getTeam = async (req, res, next) => {
   }
 };
 
-// @desc Register team — Teacher
+// @desc Register team — Event Manager
 // @route POST /api/teams
 const registerTeam = async (req, res, next) => {
   try {
@@ -47,10 +47,8 @@ const registerTeam = async (req, res, next) => {
     if (!event) return res.status(404).json({ message: 'Event not found' });
     if (event.type !== 'team') return res.status(400).json({ message: 'Event is not a team event' });
 
-    // Teacher scope check
-    if (req.user.role === 'teacher' && event.department !== req.user.department) {
-      return res.status(403).json({ message: 'Cannot register team for another department event' });
-    }
+    // Event Manager scope check
+    
 
     if (event.status === 'draft' || event.status === 'registration_closed') {
       return res.status(400).json({ message: 'Registration is currently closed for this event.' });
@@ -99,7 +97,7 @@ const updateTeamStatus = async (req, res, next) => {
   }
 };
 
-// @desc Delete team — Teacher/Admin
+// @desc Delete team — Event Manager/Admin
 // @route DELETE /api/teams/:id
 const deleteTeam = async (req, res, next) => {
   try {

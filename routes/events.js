@@ -7,9 +7,9 @@ const { uploadEventCover } = require('../middleware/upload');
 
 router.get('/', getEvents);
 router.get('/:id', getEvent);
-router.post('/', protect, authorizeRoles('admin', 'teacher'), uploadEventCover, createEvent);
-router.put('/:id', protect, authorizeRoles('admin', 'teacher'), uploadEventCover, updateEvent);
-router.patch('/:id/status', protect, authorizeRoles('admin', 'teacher'), updateEventStatus);
+router.post('/', protect, authorizeRoles('admin', 'event_manager'), uploadEventCover, createEvent);
+router.put('/:id', protect, authorizeRoles('admin', 'event_manager'), uploadEventCover, updateEvent);
+router.patch('/:id/status', protect, authorizeRoles('admin', 'event_manager'), updateEventStatus);
 router.delete('/:id', protect, authorizeRoles('admin'), deleteEvent);
 
 module.exports = router;

@@ -10,7 +10,7 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-// Ensure teacher only touches their department
+// Ensure event_manager only touches their department
 const authorizeDepartment = (req, res, next) => {
   if (req.user.role === 'admin') return next(); // admin sees all
   const dept = req.body.department || req.query.department || req.params.department;

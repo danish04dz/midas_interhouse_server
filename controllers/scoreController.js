@@ -1,7 +1,7 @@
 const Score = require('../models/Score');
 const Event = require('../models/Event');
 
-// @desc Get all scores (filterable by session, event, house, isLocked) — Admin/Teacher
+// @desc Get all scores (filterable by session, event, house, isLocked) — Admin/Event Manager
 // @route GET /api/scores
 const getAllScores = async (req, res, next) => {
   try {
@@ -42,7 +42,7 @@ const getScoresByEvent = async (req, res, next) => {
   }
 };
 
-// @desc Enter score — Teacher/Admin
+// @desc Enter score — Event Manager/Admin
 // @route POST /api/scores
 const enterScore = async (req, res, next) => {
   try {
@@ -51,9 +51,7 @@ const enterScore = async (req, res, next) => {
     const event = await Event.findById(eventId);
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    if (req.user.role === 'teacher' && event.department !== req.user.department) {
-      return res.status(403).json({ message: 'Cannot enter scores for another department' });
-    }
+    
 
     const parsedCriteria = typeof criteriaScores === 'string' ? JSON.parse(criteriaScores) : criteriaScores;
     const totalScore = (parsedCriteria || []).reduce((sum, c) => sum + (Number(c.marksAwarded) || 0), 0);
@@ -80,7 +78,7 @@ const enterScore = async (req, res, next) => {
 
     if (existingScore) {
       if (existingScore.isLocked && req.user.role !== 'admin') {
-        return res.status(400).json({ message: 'This score is locked and cannot be edited by teachers.' });
+        return res.status(400).json({ message: 'This score is locked and cannot be edited by event_managers.' });
       }
       existingScore.criteriaScores = parsedCriteria;
       existingScore.totalScore = totalScore;
@@ -113,7 +111,7 @@ const enterScore = async (req, res, next) => {
   }
 };
 
-// @desc Update score — Admin / Teacher (if unlocked)
+// @desc Update score — Admin / Event Manager (if unlocked)
 // @route PUT /api/scores/:id
 const updateScore = async (req, res, next) => {
   try {
@@ -123,9 +121,7 @@ const updateScore = async (req, res, next) => {
       return res.status(400).json({ message: 'Score is locked and cannot be edited.' });
     }
 
-    if (req.user.role === 'teacher' && score.event.department !== req.user.department) {
-      return res.status(403).json({ message: 'Cannot edit score for another department' });
-    }
+    
 
     const { criteriaScores, rank, remarks, pointsAwarded: customPoints } = req.body;
     const parsedCriteria = typeof criteriaScores === 'string' ? JSON.parse(criteriaScores) : criteriaScores;

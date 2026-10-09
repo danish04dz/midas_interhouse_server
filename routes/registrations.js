@@ -5,8 +5,8 @@ const { protect } = require('../middleware/auth');
 const { authorizeRoles } = require('../middleware/rbac');
 
 router.get('/', getRegistrations);
-router.post('/', protect, authorizeRoles('admin', 'teacher'), registerIndividual);
+router.post('/', protect, authorizeRoles('admin', 'event_manager'), registerIndividual);
 router.patch('/:id/status', protect, authorizeRoles('admin'), updateRegistrationStatus);
-router.delete('/:id', protect, authorizeRoles('admin', 'teacher'), deleteRegistration);
+router.delete('/:id', protect, authorizeRoles('admin', 'event_manager'), deleteRegistration);
 
 module.exports = router;

@@ -4,6 +4,7 @@ const Event = require('../models/Event');
 const Team = require('../models/Team');
 const IndividualRegistration = require('../models/IndividualRegistration');
 const Session = require('../models/Session');
+const Score = require('../models/Score');
 
 // @desc Get public stats for homepage
 // @route GET /api/public/stats
@@ -65,4 +66,28 @@ const getPublicParticipants = async (req, res, next) => {
   }
 };
 
-module.exports = { getStats, getPublicParticipants };
+// @desc Get public scores (locked only)
+// @route GET /api/public/scores
+const getPublicScores = async (req, res, next) => {
+  try {
+    const filter = { isLocked: true };
+    if (req.query.session) filter.session = req.query.session;
+    if (req.query.event) filter.event = req.query.event;
+    if (req.query.house) filter.house = req.query.house;
+    if (req.query.participantId) filter.participantId = req.query.participantId;
+    if (req.query.teamId) filter.teamId = req.query.teamId;
+
+    const scores = await Score.find(filter)
+      .populate('event', 'name department type')
+      .populate('house', 'name color logoUrl')
+      .populate('teamId', 'name captainName')
+      .populate('participantId', 'name rollNumber class')
+      .sort({ createdAt: -1 });
+
+    res.json(scores);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getStats, getPublicParticipants, getPublicScores };

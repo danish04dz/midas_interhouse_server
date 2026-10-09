@@ -6,8 +6,8 @@ const { authorizeRoles } = require('../middleware/rbac');
 
 router.get('/', getTeams);
 router.get('/:id', getTeam);
-router.post('/', protect, authorizeRoles('admin', 'teacher'), registerTeam);
+router.post('/', protect, authorizeRoles('admin', 'event_manager'), registerTeam);
 router.patch('/:id/status', protect, authorizeRoles('admin'), updateTeamStatus);
-router.delete('/:id', protect, authorizeRoles('admin', 'teacher'), deleteTeam);
+router.delete('/:id', protect, authorizeRoles('admin', 'event_manager'), deleteTeam);
 
 module.exports = router;

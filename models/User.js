@@ -8,11 +8,11 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6 },
-    role: { type: String, enum: ['admin', 'teacher', 'scorer'], default: 'teacher' },
+    role: { type: String, enum: ['admin', 'event_manager'], default: 'event_manager' },
     department: {
       type: String,
       enum: DEPARTMENTS,
-      required: function () { return this.role === 'teacher'; },
+      required: false,
     },
     avatarUrl: { type: String, default: '' },
     isActive: { type: Boolean, default: true },

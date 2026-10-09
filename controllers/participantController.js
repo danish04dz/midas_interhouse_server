@@ -89,17 +89,27 @@ const getParticipant = async (req, res, next) => {
   }
 };
 
-// @desc Add participant — Teacher
+// @desc Add participant — Event Manager
 // @route POST /api/participants
 const addParticipant = async (req, res, next) => {
   try {
-    const { name, rollNumber, class: studentClass, house, session } = req.body;
+    const { name, class: studentClass, house, session } = req.body;
     const photoUrl = req.file?.path || '';
     const photoPublicId = req.file?.filename || '';
 
+    let parsedStats = [];
+    if (req.body.sportsStats) {
+      try {
+        parsedStats = typeof req.body.sportsStats === 'string' ? JSON.parse(req.body.sportsStats) : req.body.sportsStats;
+      } catch (e) {
+        console.error('Failed to parse sportsStats');
+      }
+    }
+
     const participant = await Participant.create({
-      name, rollNumber, class: studentClass, house, session,
+      name, class: studentClass, house, session,
       photoUrl, photoPublicId,
+      sportsStats: parsedStats,
       addedBy: req.user._id,
     });
 
@@ -110,18 +120,26 @@ const addParticipant = async (req, res, next) => {
   }
 };
 
-// @desc Update participant — Teacher/Admin
+// @desc Update participant — Event Manager/Admin
 // @route PUT /api/participants/:id
 const updateParticipant = async (req, res, next) => {
   try {
     const participant = await Participant.findById(req.params.id);
     if (!participant) return res.status(404).json({ message: 'Participant not found' });
 
-    const { name, rollNumber, class: studentClass, house } = req.body;
+    const { name, class: studentClass, house } = req.body;
     participant.name = name || participant.name;
-    participant.rollNumber = rollNumber || participant.rollNumber;
     participant.class = studentClass || participant.class;
     participant.house = house || participant.house;
+    
+    if (req.body.sportsStats) {
+      try {
+        participant.sportsStats = typeof req.body.sportsStats === 'string' ? JSON.parse(req.body.sportsStats) : req.body.sportsStats;
+      } catch (e) {
+        console.error('Failed to parse sportsStats');
+      }
+    }
+
     if (req.file) {
       participant.photoUrl = req.file.path;
       participant.photoPublicId = req.file.filename;

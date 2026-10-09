@@ -25,6 +25,7 @@
     "mongoose": "^8.24.4",
     "multer": "^2.3.0",
     "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^10.0.16",
     "puppeteer": "^24.43.1",
     "socket.io": "^4.8.3"
   },

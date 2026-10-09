@@ -1,6 +1,7 @@
 const User = require('../models/User');
+const { sendEventManagerWelcomeEmail } = require('../utils/emailService');
 
-// @desc Get all users (teachers) — Admin
+// @desc Get all users (event_managers) — Admin
 // @route GET /api/users
 const getUsers = async (req, res, next) => {
   try {
@@ -11,7 +12,7 @@ const getUsers = async (req, res, next) => {
   }
 };
 
-// @desc Create teacher account — Admin
+// @desc Create event_manager account — Admin
 // @route POST /api/users
 const createUser = async (req, res, next) => {
   try {
@@ -19,12 +20,19 @@ const createUser = async (req, res, next) => {
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already exists' });
 
+    const userRole = role || 'event_manager';
+
     const user = await User.create({
       name, email, password,
-      role: role || 'teacher',
+      role: userRole,
       department,
       createdBy: req.user._id,
     });
+
+    // Send email to event_manager
+    if (userRole === 'event_manager' || userRole === 'admin') {
+      await sendEventManagerWelcomeEmail(email, name, password);
+    }
 
     res.status(201).json({
       _id: user._id,

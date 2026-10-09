@@ -6,7 +6,7 @@ const { authorizeRoles } = require('../middleware/rbac');
 const { uploadGalleryMedia } = require('../middleware/upload');
 
 router.get('/', getGallery);
-router.post('/', protect, authorizeRoles('admin', 'teacher'), uploadGalleryMedia, uploadGalleryItem);
-router.delete('/:id', protect, authorizeRoles('admin', 'teacher'), deleteGalleryItem);
+router.post('/', protect, authorizeRoles('admin', 'event_manager'), uploadGalleryMedia, uploadGalleryItem);
+router.delete('/:id', protect, authorizeRoles('admin', 'event_manager'), deleteGalleryItem);
 
 module.exports = router;

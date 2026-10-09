@@ -4,7 +4,7 @@ const { getCertificates, generateCertificates } = require('../controllers/certif
 const { protect } = require('../middleware/auth');
 const { authorizeRoles } = require('../middleware/rbac');
 
-router.get('/', protect, authorizeRoles('admin', 'teacher'), getCertificates);
+router.get('/', protect, authorizeRoles('admin', 'event_manager'), getCertificates);
 router.post('/generate', protect, authorizeRoles('admin'), generateCertificates);
 
 module.exports = router;

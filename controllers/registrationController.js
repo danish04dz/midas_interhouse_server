@@ -23,7 +23,7 @@ const getRegistrations = async (req, res, next) => {
   }
 };
 
-// @desc Register individual — Teacher
+// @desc Register individual — Event Manager
 // @route POST /api/registrations
 const registerIndividual = async (req, res, next) => {
   try {
@@ -33,9 +33,7 @@ const registerIndividual = async (req, res, next) => {
     if (!event) return res.status(404).json({ message: 'Event not found' });
     if (event.type !== 'individual') return res.status(400).json({ message: 'Event is not individual type' });
 
-    if (req.user.role === 'teacher' && event.department !== req.user.department) {
-      return res.status(403).json({ message: 'Cannot register for another department event' });
-    }
+    
 
     if (event.status !== 'registration_open') {
       return res.status(400).json({ message: 'Registration is not open' });
@@ -69,7 +67,7 @@ const updateRegistrationStatus = async (req, res, next) => {
   }
 };
 
-// @desc Delete registration — Teacher/Admin
+// @desc Delete registration — Event Manager/Admin
 // @route DELETE /api/registrations/:id
 const deleteRegistration = async (req, res, next) => {
   try {

@@ -21,14 +21,14 @@ router.get('/', getFixtures);
 router.get('/live', getLiveFixtures);
 router.get('/:id', getFixture);
 
-// Protected routes (admin + teacher + scorer)
+// Protected routes (admin + event_manager + scorer)
 router.post('/', protect, authorizeRoles('admin'), createFixture);
 router.post('/bulk', protect, authorizeRoles('admin'), createBulkFixtures);
 router.post('/bracket', protect, authorizeRoles('admin'), createTournamentBracket);
-router.put('/:id', protect, authorizeRoles('admin', 'teacher', 'scorer'), updateFixture);
-router.patch('/:id/score', protect, authorizeRoles('admin', 'teacher', 'scorer'), updateScore);
-router.post('/:id/commentary', protect, authorizeRoles('admin', 'teacher', 'scorer'), addCommentary);
-router.patch('/:id/complete', protect, authorizeRoles('admin', 'teacher', 'scorer'), completeFixture);
+router.put('/:id', protect, authorizeRoles('admin', 'event_manager'), updateFixture);
+router.patch('/:id/score', protect, authorizeRoles('admin', 'event_manager'), updateScore);
+router.post('/:id/commentary', protect, authorizeRoles('admin', 'event_manager'), addCommentary);
+router.patch('/:id/complete', protect, authorizeRoles('admin', 'event_manager'), completeFixture);
 router.delete('/:id', protect, authorizeRoles('admin'), deleteFixture);
 
 module.exports = router;
