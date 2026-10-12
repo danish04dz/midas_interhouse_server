@@ -127,10 +127,11 @@ const updateParticipant = async (req, res, next) => {
     const participant = await Participant.findById(req.params.id);
     if (!participant) return res.status(404).json({ message: 'Participant not found' });
 
-    const { name, class: studentClass, house } = req.body;
+    const { name, class: studentClass, house, session } = req.body;
     participant.name = name || participant.name;
     participant.class = studentClass || participant.class;
     participant.house = house || participant.house;
+    if (session) participant.session = session;
     
     if (req.body.sportsStats) {
       try {
@@ -181,6 +182,16 @@ const addBulkParticipants = async (req, res, next) => {
     const result = await Participant.insertMany(enriched, { ordered: false });
     res.status(201).json({ message: `${result.length} participants added successfully`, count: result.length });
   } catch (err) {
+    if (err.name === 'BulkWriteError' || err.name === 'MongoBulkWriteError') {
+      // Some inserts failed, but others succeeded because ordered: false
+      const insertedCount = err.result?.nInserted || err.insertedDocs?.length || 0;
+      const failedCount = err.writeErrors?.length || 0;
+      return res.status(201).json({ 
+        message: `${insertedCount} participants added, ${failedCount} failed. Note: Ensure there are no exact duplicates.`, 
+        count: insertedCount,
+        errors: err.writeErrors || []
+      });
+    }
     next(err);
   }
 };

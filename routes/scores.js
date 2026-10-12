@@ -13,7 +13,7 @@ const {
 const { protect } = require('../middleware/auth');
 const { authorizeRoles } = require('../middleware/rbac');
 
-router.get('/pending', protect, authorizeRoles('admin'), getPendingScores);
+router.get('/pending', protect, authorizeRoles('admin', 'event_manager'), getPendingScores);
 router.get('/', protect, authorizeRoles('admin', 'event_manager'), getAllScores);
 router.get('/event/:eventId', protect, authorizeRoles('admin', 'event_manager'), getScoresByEvent);
 router.post('/', protect, authorizeRoles('admin', 'event_manager'), enterScore);
